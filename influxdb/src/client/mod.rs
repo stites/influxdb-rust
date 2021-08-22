@@ -93,7 +93,7 @@ impl Client {
         self
     }
 
-    pub fn with_bearer_auth<S1>(mut self, jwt_token: S1) -> Self
+    pub fn with_token_auth<S1>(mut self, jwt_token: S1) -> Self
     where
         S1: Into<String>,
     {
@@ -216,7 +216,8 @@ impl Client {
         };
 
         let request_builder = if let Some(jwt_token) = self.jwt_token.as_ref() {
-            request_builder.bearer_auth(jwt_token)
+            let header_value = format!("Token {}", jwt_token);
+            request_builder.header(reqwest::header::AUTHORIZATION, &header_value)
         } else {
             request_builder
         };
