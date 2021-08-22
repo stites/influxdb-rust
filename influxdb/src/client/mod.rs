@@ -33,6 +33,7 @@ use std::sync::Arc;
 pub struct Client {
     pub(crate) url: Arc<String>,
     pub(crate) parameters: Arc<HashMap<&'static str, String>>,
+    pub(crate) jwt_token: Option<String>,
     pub(crate) client: HttpClient,
 }
 
@@ -61,6 +62,7 @@ impl Client {
         Client {
             url: Arc::new(url.into()),
             parameters: Arc::new(parameters),
+            jwt_token: None,
             client: HttpClient::new(),
         }
     }
@@ -88,6 +90,14 @@ impl Client {
         with_auth.insert("u", username.into());
         with_auth.insert("p", password.into());
         self.parameters = Arc::new(with_auth);
+        self
+    }
+
+    pub fn with_bearer_auth<S1>(mut self, jwt_token: S1) -> Self
+    where
+        S1: Into<String>,
+    {
+        self.jwt_token = Some(jwt_token.into());
         self
     }
 
@@ -203,6 +213,12 @@ impl Client {
 
                 self.client.post(url).body(query.get()).query(&parameters)
             }
+        };
+
+        let request_builder = if let Some(jwt_token) = self.jwt_token.as_ref() {
+            request_builder.bearer_auth(jwt_token)
+        } else {
+            request_builder
         };
 
         #[cfg(feature = "surf")]
