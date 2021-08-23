@@ -59,7 +59,7 @@ impl WriteQuery {
     ///
     /// Timestamp::Nanoseconds(0).into_query("measurement").add_field("field1", 5).build();
     /// ```
-    pub fn add_field<S, F>(mut self, field: S, value: F) -> Self
+    pub fn add_field<S, F>(&mut self, field: S, value: F) -> &mut Self
     where
         S: Into<String>,
         F: WriteType,
@@ -83,7 +83,7 @@ impl WriteQuery {
     ///     .into_query("measurement")
     ///     .add_tag("field1", 5); // calling `.build()` now would result in a `Err(Error::InvalidQueryError)`
     /// ```
-    pub fn add_tag<S, I>(mut self, tag: S, value: I) -> Self
+    pub fn add_tag<S, I>(&mut self, tag: S, value: I) -> &mut Self
     where
         S: Into<String>,
         I: WriteType,
