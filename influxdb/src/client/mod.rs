@@ -67,6 +67,38 @@ impl Client {
         }
     }
 
+    /// Instantiates a new [`Client`](crate::Client)
+    ///
+    /// # Arguments
+    ///
+    ///  * `url`: The URL where InfluxDB is running (ex. `http://localhost:8086`).
+    ///  * `database`: The Database against which queries and writes will be run.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use influxdb::Client;
+    ///
+    /// let _client = Client::new("http://localhost:8086", "ORG", "YOUR_BUCKET");
+    /// ```
+    pub fn new_v2<S1, S2, S3, S4>(url: S1, org: S2, bucket: S3, token: S4) -> Self
+    where
+        S1: Into<String>,
+        S2: Into<String>,
+        S3: Into<String>,
+        S4: Into<String>,
+    {
+        let mut parameters = HashMap::<&str, String>::new();
+        parameters.insert("org", org.into());
+        parameters.insert("bucket", bucket.into());
+        Client {
+            url: Arc::new(url.into()),
+            parameters: Arc::new(parameters),
+            jwt_token: Some(token.into()),
+            client: HttpClient::new(),
+        }
+    }
+
     /// Add authentication/authorization information to [`Client`](crate::Client)
     ///
     /// # Arguments
