@@ -95,10 +95,17 @@ impl WriteQuery {
     pub fn get_precision(&self) -> String {
         let modifier = match self.timestamp {
             Timestamp::Nanoseconds(_) => "ns",
+            #[cfg(not(feature = "v2"))]
             Timestamp::Microseconds(_) => "u",
+            // 2.0 uses different format
+            // https://docs.influxdata.com/influxdb/v2.0/write-data/#timestamp-precision
+            #[cfg(feature = "v2")]
+            Timestamp::Microseconds(_) => "us",
             Timestamp::Milliseconds(_) => "ms",
             Timestamp::Seconds(_) => "s",
+            #[cfg(not(feature = "v2"))]
             Timestamp::Minutes(_) => "m",
+            #[cfg(not(feature = "v2"))]
             Timestamp::Hours(_) => "h",
         };
         modifier.to_string()

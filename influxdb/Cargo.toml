@@ -29,9 +29,11 @@ serde_json = { version = "1.0.48", optional = true }
 thiserror = "1.0"
 
 [features]
-default = ["use-serde", "reqwest-client-rustls"]
+default = ["use-serde", "reqwest-client-rustls", "v2"]
 derive = ["influxdb_derive"]
 use-serde = ["serde", "serde_json"]
+# Use influx v2 instead of influx v1
+v2 = []
 
 # http clients
 curl-client = ["surf", "surf/curl-client"]

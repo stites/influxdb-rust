@@ -52,6 +52,7 @@ impl Client {
     ///
     /// let _client = Client::new("http://localhost:8086", "test");
     /// ```
+    #[cfg(not(feature = "v2"))]
     pub fn new<S1, S2>(url: S1, database: S2) -> Self
     where
         S1: Into<String>,
@@ -72,16 +73,19 @@ impl Client {
     /// # Arguments
     ///
     ///  * `url`: The URL where InfluxDB is running (ex. `http://localhost:8086`).
-    ///  * `database`: The Database against which queries and writes will be run.
+    ///  * `org`: The [organization](https://docs.influxdata.com/influxdb/v2.0/organizations/) against which queries and writes will be run.
+    ///  * `bucket`: The [bucket](https://docs.influxdata.com/influxdb/v2.0/organizations/buckets/) against which queries and writes will be run.
+    ///  * `token`: [API token](https://docs.influxdata.com/influxdb/v2.0/security/tokens/) for secure interaction.
     ///
     /// # Examples
     ///
     /// ```rust
     /// use influxdb::Client;
     ///
-    /// let _client = Client::new("http://localhost:8086", "ORG", "YOUR_BUCKET");
+    /// let _client = Client::new("http://localhost:8086", "ORG", "YOUR_BUCKET", "YOUR API TOKEN");
     /// ```
-    pub fn new_v2<S1, S2, S3, S4>(url: S1, org: S2, bucket: S3, token: S4) -> Self
+    #[cfg(feature = "v2")]
+    pub fn new<S1, S2, S3, S4>(url: S1, org: S2, bucket: S3, token: S4) -> Self
     where
         S1: Into<String>,
         S2: Into<String>,

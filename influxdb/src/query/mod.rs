@@ -30,7 +30,9 @@ pub mod write_query;
 use std::fmt;
 
 use crate::{Error, ReadQuery, WriteQuery};
-use consts::{MILLIS_PER_SECOND, MINUTES_PER_HOUR, NANOS_PER_MILLI, SECONDS_PER_MINUTE};
+use consts::{MILLIS_PER_SECOND, NANOS_PER_MILLI};
+#[cfg(not(feature = "v2"))]
+use consts::{MINUTES_PER_HOUR, SECONDS_PER_MINUTE};
 
 #[cfg(feature = "derive")]
 pub use influxdb_derive::InfluxDbWriteable;
@@ -41,16 +43,30 @@ pub enum Timestamp {
     Microseconds(u128),
     Milliseconds(u128),
     Seconds(u128),
+    // 2.0 does not support minutes for timestamp precision
+    // https://docs.influxdata.com/influxdb/v2.0/write-data/#timestamp-precision
+    #[cfg(not(feature = "v2"))]
     Minutes(u128),
+    // 2.0 does not support minutes for timestamp precision
+    // https://docs.influxdata.com/influxdb/v2.0/write-data/#timestamp-precision
+    #[cfg(not(feature = "v2"))]
     Hours(u128),
 }
 
 impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Timestamp::*;
+        #[cfg(not(feature = "v2"))]
         match self {
             Nanoseconds(ts) | Microseconds(ts) | Milliseconds(ts) | Seconds(ts) | Minutes(ts)
             | Hours(ts) => write!(f, "{}", ts),
+        }
+
+        #[cfg(feature = "v2")]
+        match self {
+            Nanoseconds(ts) | Microseconds(ts) | Milliseconds(ts) | Seconds(ts) => {
+                write!(f, "{}", ts)
+            }
         }
     }
 }
@@ -58,11 +74,13 @@ impl fmt::Display for Timestamp {
 impl From<Timestamp> for DateTime<Utc> {
     fn from(ts: Timestamp) -> DateTime<Utc> {
         match ts {
+            #[cfg(not(feature = "v2"))]
             Timestamp::Hours(h) => {
                 let nanos =
                     h * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MILLIS_PER_SECOND * NANOS_PER_MILLI;
                 Utc.timestamp_nanos(nanos.try_into().unwrap())
             }
+            #[cfg(not(feature = "v2"))]
             Timestamp::Minutes(m) => {
                 let nanos = m * SECONDS_PER_MINUTE * MILLIS_PER_SECOND * NANOS_PER_MILLI;
                 Utc.timestamp_nanos(nanos.try_into().unwrap())
