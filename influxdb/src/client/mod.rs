@@ -92,7 +92,7 @@ impl Client {
         parameters.insert("org", org.into());
         parameters.insert("bucket", bucket.into());
         Client {
-            url: Arc::new(url.into()),
+            url: Arc::new(format!("{}/api/v2", url.into())),
             parameters: Arc::new(parameters),
             jwt_token: Some(token.into()),
             client: HttpClient::new(),
