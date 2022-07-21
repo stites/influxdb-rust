@@ -15,26 +15,52 @@
 //! assert_eq!(client.database_name(), "test");
 //! ```
 
-use futures::prelude::*;
+use futures_util::TryFutureExt;
 use http::StatusCode;
 #[cfg(feature = "reqwest")]
 use reqwest::{Client as HttpClient, Response as HttpResponse};
+use std::collections::{BTreeMap, HashMap};
+use std::fmt::{self, Debug, Formatter};
+use std::sync::Arc;
 #[cfg(feature = "surf")]
 use surf::{Client as HttpClient, Response as HttpResponse};
 
 use crate::query::QueryType;
 use crate::Error;
 use crate::Query;
-use std::collections::HashMap;
-use std::sync::Arc;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 /// Internal Representation of a Client
 pub struct Client {
     pub(crate) url: Arc<String>,
     pub(crate) parameters: Arc<HashMap<&'static str, String>>,
     pub(crate) jwt_token: Option<String>,
     pub(crate) client: HttpClient,
+}
+
+struct RedactPassword<'a>(&'a HashMap<&'static str, String>);
+
+impl<'a> Debug for RedactPassword<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let entries = self
+            .0
+            .iter()
+            .map(|(k, v)| match *k {
+                "p" => (*k, "<redacted>"),
+                _ => (*k, v.as_str()),
+            })
+            .collect::<BTreeMap<&'static str, &str>>();
+        f.debug_map().entries(entries.into_iter()).finish()
+    }
+}
+
+impl Debug for Client {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Client")
+            .field("url", &self.url)
+            .field("parameters", &RedactPassword(&self.parameters))
+            .finish_non_exhaustive()
+    }
 }
 
 impl Client {
@@ -52,7 +78,8 @@ impl Client {
     ///
     /// let _client = Client::new("http://localhost:8086", "test");
     /// ```
-    #[cfg(not(feature = "v2"))]
+    // #[cfg(not(feature = "v2"))]
+    #[must_use = "Creating a client is pointless unless you use it"]
     pub fn new<S1, S2>(url: S1, database: S2) -> Self
     where
         S1: Into<String>,
@@ -117,6 +144,7 @@ impl Client {
     ///
     /// let _client = Client::new("http://localhost:9086", "test").with_auth("admin", "password");
     /// ```
+    #[must_use = "Creating a client is pointless unless you use it"]
     pub fn with_auth<S1, S2>(mut self, username: S1, password: S2) -> Self
     where
         S1: Into<String>,
@@ -134,6 +162,13 @@ impl Client {
         S1: Into<String>,
     {
         self.jwt_token = Some(jwt_token.into());
+        self
+    }
+
+    /// Replaces the HTTP Client
+    #[must_use = "Creating a client is pointless unless you use it"]
+    pub fn with_http_client(mut self, http_client: HttpClient) -> Self {
+        self.client = http_client;
         self
     }
 
@@ -210,7 +245,7 @@ impl Client {
     /// let query = Timestamp::Milliseconds(since_the_epoch)
     ///     .into_query("weather")
     ///     .add_field("temperature", 82);
-    /// let results = client.query(&query).await?;
+    /// let results = client.query(query).await?;
     ///
     /// # Ok(())
     /// # }
@@ -221,7 +256,7 @@ impl Client {
     /// a [`Error`] variant will be returned.
     ///
     /// [`Error`]: enum.Error.html
-    pub async fn query<'q, Q>(&self, q: &'q Q) -> Result<String, Error>
+    pub async fn query<Q>(&self, q: Q) -> Result<String, Error>
     where
         Q: Query,
     {
@@ -307,6 +342,25 @@ pub(crate) fn check_status(res: &HttpResponse) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::Client;
+    use indoc::indoc;
+
+    #[test]
+    fn test_client_debug_redacted_password() {
+        let client = Client::new("https://localhost:8086", "db").with_auth("user", "pass");
+        let actual = format!("{:#?}", client);
+        let expected = indoc! { r#"
+            Client {
+                url: "https://localhost:8086",
+                parameters: {
+                    "db": "db",
+                    "p": "<redacted>",
+                    "u": "user",
+                },
+                ..
+            }
+        "# };
+        assert_eq!(actual.trim(), expected.trim());
+    }
 
     #[test]
     fn test_fn_database() {

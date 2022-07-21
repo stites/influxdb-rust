@@ -37,6 +37,7 @@ pub struct WriteQuery {
 
 impl WriteQuery {
     /// Creates a new [`WriteQuery`](crate::query::write_query::WriteQuery)
+    #[must_use = "Creating a query is pointless unless you execute it"]
     pub fn new<S>(timestamp: Timestamp, measurement: S) -> Self
     where
         S: Into<String>,
@@ -59,7 +60,9 @@ impl WriteQuery {
     ///
     /// Timestamp::Nanoseconds(0).into_query("measurement").add_field("field1", 5).build();
     /// ```
-    pub fn add_field<S, F>(&mut self, field: S, value: F) -> &mut Self
+    #[must_use = "Creating a query is pointless unless you execute it"]
+    pub fn add_field<S, F>(mut self, field: S, value: F) -> Self
+    // pub fn add_field<S, F>(&mut self, field: S, value: F) -> &mut Self
     where
         S: Into<String>,
         F: WriteType,
@@ -83,7 +86,9 @@ impl WriteQuery {
     ///     .into_query("measurement")
     ///     .add_tag("field1", 5); // calling `.build()` now would result in a `Err(Error::InvalidQueryError)`
     /// ```
-    pub fn add_tag<S, I>(&mut self, tag: S, value: I) -> &mut Self
+    #[must_use = "Creating a query is pointless unless you execute it"]
+    pub fn add_tag<S, I>(mut self, tag: S, value: I) -> Self
+    //pub fn add_tag<S, I>(&mut self, tag: S, value: I) -> &mut Self
     where
         S: Into<String>,
         I: WriteType,
@@ -203,11 +208,11 @@ impl Query for WriteQuery {
             .join(",");
 
         Ok(ValidQuery(format!(
-            "{measurement}{tags} {fields}{time}",
+            "{measurement}{tags} {fields} {time}",
             measurement = LineProtoTerm::Measurement(&self.measurement).escape(),
             tags = tags,
             fields = fields,
-            time = format!(" {}", self.timestamp)
+            time = self.timestamp
         )))
     }
 
@@ -341,7 +346,6 @@ mod tests {
 
         assert!(query.is_ok(), "Query was empty");
         let query_res = query.unwrap().get();
-        #[allow(clippy::print_literal)]
         assert_eq!(
             query_res,
             r#"wea\,\ ther=,location=us-midwest,loc\,\ \="ation=us\,\ \"mid\=west temperature=82i,"temp\=era\,t\ ure"="too\"\\\\hot",float=82 11"#

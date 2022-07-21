@@ -133,6 +133,26 @@ pub trait Query {
     fn get_type(&self) -> QueryType;
 }
 
+impl<Q: Query> Query for &Q {
+    fn build(&self) -> Result<ValidQuery, Error> {
+        Q::build(self)
+    }
+
+    fn get_type(&self) -> QueryType {
+        Q::get_type(self)
+    }
+}
+
+impl<Q: Query> Query for Box<Q> {
+    fn build(&self) -> Result<ValidQuery, Error> {
+        Q::build(&*self)
+    }
+
+    fn get_type(&self) -> QueryType {
+        Q::get_type(&*self)
+    }
+}
+
 pub trait InfluxDbWriteable {
     fn into_query<I: Into<String>>(self, name: I) -> WriteQuery;
 }
@@ -153,6 +173,7 @@ impl dyn Query {
     ///
     /// Query::raw_read_query("SELECT * FROM weather"); // Is of type [`ReadQuery`](crate::ReadQuery)
     /// ```
+    #[deprecated(since = "0.5.0", note = "Use ReadQuery::new instead")]
     pub fn raw_read_query<S>(read_query: S) -> ReadQuery
     where
         S: Into<String>,

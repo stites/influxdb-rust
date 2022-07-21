@@ -3,7 +3,7 @@ name: Rust
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
 
 jobs:
@@ -27,16 +27,16 @@ jobs:
             - name: Check code formatting
               run: cargo fmt --all -- --check
             - name: Check Clippy lints (reqwest)
-              run: cargo clippy --all-targets --no-default-features --features use-serde,derive,reqwest-client -- -D warnings
+              run: cargo clippy --manifest-path influxdb/Cargo.toml --all-targets --no-default-features --features use-serde,derive,reqwest-client -- -D warnings
             - name: Check Clippy lints (surf)
-              run: cargo clippy --all-targets --no-default-features --features use-serde,derive,hyper-client -- -D warnings
+              run: cargo clippy --manifest-path influxdb/Cargo.toml --all-targets --no-default-features --features use-serde,derive,hyper-client -- -D warnings
 
     compile:
         name: Compile (${{ matrix.rust_release }}/${{ matrix.os }})
         runs-on: ${{ matrix.os }}
         strategy:
             matrix:
-                rust_release: [1.46, stable, nightly]
+                rust_release: ["1.53", stable, nightly]
                 os: [ubuntu-latest, windows-latest, macOS-latest]
 
         steps:

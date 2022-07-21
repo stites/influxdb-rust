@@ -7,7 +7,7 @@ use utilities::{
 };
 
 use influxdb::InfluxDbWriteable;
-use influxdb::{Client, Error, Query, Timestamp};
+use influxdb::{Client, Error, ReadQuery, Timestamp};
 
 /// INTEGRATION TEST
 ///
@@ -52,8 +52,8 @@ async fn test_connection_error() {
     let test_name = "test_connection_error";
     let client =
         Client::new("http://127.0.0.1:10086", test_name).with_auth("nopriv_user", "password");
-    let read_query = Query::raw_read_query("SELECT * FROM weather");
-    let read_result = client.query(&read_query).await;
+    let read_query = ReadQuery::new("SELECT * FROM weather");
+    let read_result = client.query(read_query).await;
     assert_result_err(&read_result);
     match read_result {
         Err(Error::ConnectionError { .. }) => {}
@@ -78,7 +78,7 @@ async fn test_authed_write_and_read() {
                 Client::new("http://127.0.0.1:9086", TEST_NAME).with_auth("admin", "password");
             let query = format!("CREATE DATABASE {}", TEST_NAME);
             client
-                .query(&Query::raw_read_query(query))
+                .query(ReadQuery::new(query))
                 .await
                 .expect("could not setup db");
 
@@ -87,11 +87,11 @@ async fn test_authed_write_and_read() {
             let write_query = Timestamp::Hours(11)
                 .into_query("weather")
                 .add_field("temperature", 82);
-            let write_result = client.query(&write_query).await;
+            let write_result = client.query(write_query).await;
             assert_result_ok(&write_result);
 
-            let read_query = Query::raw_read_query("SELECT * FROM weather");
-            let read_result = client.query(&read_query).await;
+            let read_query = ReadQuery::new("SELECT * FROM weather");
+            let read_result = client.query(read_query).await;
             assert_result_ok(&read_result);
             assert!(
                 !read_result.unwrap().contains("error"),
@@ -104,7 +104,7 @@ async fn test_authed_write_and_read() {
             let query = format!("DROP DATABASE {}", TEST_NAME);
 
             client
-                .query(&Query::raw_read_query(query))
+                .query(ReadQuery::new(query))
                 .await
                 .expect("could not clean up db");
         },
@@ -126,7 +126,7 @@ async fn test_wrong_authed_write_and_read() {
                 Client::new("http://127.0.0.1:9086", TEST_NAME).with_auth("admin", "password");
             let query = format!("CREATE DATABASE {}", TEST_NAME);
             client
-                .query(&Query::raw_read_query(query))
+                .query(ReadQuery::new(query))
                 .await
                 .expect("could not setup db");
 
@@ -135,7 +135,7 @@ async fn test_wrong_authed_write_and_read() {
             let write_query = Timestamp::Hours(11)
                 .into_query("weather")
                 .add_field("temperature", 82);
-            let write_result = client.query(&write_query).await;
+            let write_result = client.query(write_query).await;
             assert_result_err(&write_result);
             match write_result {
                 Err(Error::AuthorizationError) => {}
@@ -145,8 +145,8 @@ async fn test_wrong_authed_write_and_read() {
                 ),
             }
 
-            let read_query = Query::raw_read_query("SELECT * FROM weather");
-            let read_result = client.query(&read_query).await;
+            let read_query = ReadQuery::new("SELECT * FROM weather");
+            let read_result = client.query(read_query).await;
             assert_result_err(&read_result);
             match read_result {
                 Err(Error::AuthorizationError) => {}
@@ -158,8 +158,8 @@ async fn test_wrong_authed_write_and_read() {
 
             let client = Client::new("http://127.0.0.1:9086", TEST_NAME)
                 .with_auth("nopriv_user", "password");
-            let read_query = Query::raw_read_query("SELECT * FROM weather");
-            let read_result = client.query(&read_query).await;
+            let read_query = ReadQuery::new("SELECT * FROM weather");
+            let read_result = client.query(read_query).await;
             assert_result_err(&read_result);
             match read_result {
                 Err(Error::AuthenticationError) => {}
@@ -174,7 +174,7 @@ async fn test_wrong_authed_write_and_read() {
                 Client::new("http://127.0.0.1:9086", TEST_NAME).with_auth("admin", "password");
             let query = format!("DROP DATABASE {}", TEST_NAME);
             client
-                .query(&Query::raw_read_query(query))
+                .query(ReadQuery::new(query))
                 .await
                 .expect("could not clean up db");
         },
@@ -196,14 +196,14 @@ async fn test_non_authed_write_and_read() {
                 Client::new("http://127.0.0.1:9086", TEST_NAME).with_auth("admin", "password");
             let query = format!("CREATE DATABASE {}", TEST_NAME);
             client
-                .query(&Query::raw_read_query(query))
+                .query(ReadQuery::new(query))
                 .await
                 .expect("could not setup db");
             let non_authed_client = Client::new("http://127.0.0.1:9086", TEST_NAME);
             let write_query = Timestamp::Hours(11)
                 .into_query("weather")
                 .add_field("temperature", 82);
-            let write_result = non_authed_client.query(&write_query).await;
+            let write_result = non_authed_client.query(write_query).await;
             assert_result_err(&write_result);
             match write_result {
                 Err(Error::AuthorizationError) => {}
@@ -213,8 +213,8 @@ async fn test_non_authed_write_and_read() {
                 ),
             }
 
-            let read_query = Query::raw_read_query("SELECT * FROM weather");
-            let read_result = non_authed_client.query(&read_query).await;
+            let read_query = ReadQuery::new("SELECT * FROM weather");
+            let read_result = non_authed_client.query(read_query).await;
             assert_result_err(&read_result);
             match read_result {
                 Err(Error::AuthorizationError) => {}
@@ -229,7 +229,7 @@ async fn test_non_authed_write_and_read() {
                 Client::new("http://127.0.0.1:9086", TEST_NAME).with_auth("admin", "password");
             let query = format!("DROP DATABASE {}", TEST_NAME);
             client
-                .query(&Query::raw_read_query(query))
+                .query(ReadQuery::new(query))
                 .await
                 .expect("could not clean up db");
         },
@@ -252,11 +252,11 @@ async fn test_write_and_read_field() {
             let write_query = Timestamp::Hours(11)
                 .into_query("weather")
                 .add_field("temperature", 82);
-            let write_result = client.query(&write_query).await;
+            let write_result = client.query(write_query).await;
             assert_result_ok(&write_result);
 
-            let read_query = Query::raw_read_query("SELECT * FROM weather");
-            let read_result = client.query(&read_query).await;
+            let read_query = ReadQuery::new("SELECT * FROM weather");
+            let read_result = client.query(read_query).await;
             assert_result_ok(&read_result);
             assert!(
                 !read_result.unwrap().contains("error"),
@@ -292,7 +292,7 @@ async fn test_write_and_read_option() {
                     .into_query("weather")
                     .add_field("temperature", 82)
                     .add_field("wind_strength", <Option<u64>>::None);
-                let write_result = client.query(&write_query).await;
+                let write_result = client.query(write_query).await;
                 assert_result_ok(&write_result);
 
                 #[derive(Deserialize, Debug, PartialEq)]
@@ -304,8 +304,7 @@ async fn test_write_and_read_option() {
                     temperature: i32,
                 }
 
-                let query =
-                    Query::raw_read_query("SELECT time, temperature, wind_strength FROM weather");
+                let query = ReadQuery::new("SELECT time, temperature, wind_strength FROM weather");
                 let result = client
                     .json_query(query)
                     .await
@@ -352,7 +351,7 @@ async fn test_json_query() {
             let write_query = Timestamp::Hours(11)
                 .into_query("weather")
                 .add_field("temperature", 82);
-            let write_result = client.query(&write_query).await;
+            let write_result = client.query(write_query).await;
             assert_result_ok(&write_result);
 
             #[derive(Deserialize, Debug, PartialEq)]
@@ -361,7 +360,7 @@ async fn test_json_query() {
                 temperature: i32,
             }
 
-            let query = Query::raw_read_query("SELECT * FROM weather");
+            let query = ReadQuery::new("SELECT * FROM weather");
             let result = client
                 .json_query(query)
                 .await
@@ -405,7 +404,7 @@ async fn test_json_query_tagged() {
                 .into_query("weather")
                 .add_tag("location", "London")
                 .add_field("temperature", 82);
-            let write_result = client.query(&write_query).await;
+            let write_result = client.query(write_query).await;
             assert_result_ok(&write_result);
 
             #[derive(Deserialize, Debug, PartialEq)]
@@ -419,7 +418,7 @@ async fn test_json_query_tagged() {
                 temperature: i32,
             }
 
-            let query = Query::raw_read_query("SELECT * FROM weather GROUP BY location");
+            let query = ReadQuery::new("SELECT * FROM weather GROUP BY location");
             let result = client.json_query(query).await.and_then(|mut db_result| {
                 db_result.deserialize_next_tagged::<WeatherMeta, Weather>()
             });
@@ -477,9 +476,9 @@ async fn test_json_query_vec() {
                 .into_query("temperature_vec")
                 .add_field("temperature", 18);
 
-            let _write_result = client.query(&write_query1).await;
-            let _write_result2 = client.query(&write_query2).await;
-            let _write_result2 = client.query(&write_query3).await;
+            let _write_result = client.query(write_query1).await;
+            let _write_result2 = client.query(write_query2).await;
+            let _write_result2 = client.query(write_query3).await;
 
             #[derive(Deserialize, Debug, PartialEq)]
             struct Weather {
@@ -487,7 +486,7 @@ async fn test_json_query_vec() {
                 temperature: i32,
             }
 
-            let query = Query::raw_read_query("SELECT * FROM temperature_vec");
+            let query = ReadQuery::new("SELECT * FROM temperature_vec");
             let result = client
                 .json_query(query)
                 .await
@@ -537,15 +536,14 @@ async fn test_serde_multi_query() {
                 .into_query("humidity")
                 .add_field("humidity", 69);
 
-            let write_result = client.query(&write_query).await;
-            let write_result2 = client.query(&write_query2).await;
+            let write_result = client.query(write_query).await;
+            let write_result2 = client.query(write_query2).await;
             assert_result_ok(&write_result);
             assert_result_ok(&write_result2);
 
             let result = client
                 .json_query(
-                    Query::raw_read_query("SELECT * FROM temperature")
-                        .add_query("SELECT * FROM humidity"),
+                    ReadQuery::new("SELECT * FROM temperature").add_query("SELECT * FROM humidity"),
                 )
                 .await
                 .and_then(|mut db_result| {
@@ -588,7 +586,7 @@ async fn test_serde_multi_query() {
 async fn test_wrong_query_errors() {
     let client = create_client("test_name");
     let result = client
-        .json_query(Query::raw_read_query("CREATE DATABASE this_should_fail"))
+        .json_query(ReadQuery::new("CREATE DATABASE this_should_fail"))
         .await;
     assert!(
         result.is_err(),

@@ -1,5 +1,6 @@
-use futures::prelude::*;
-use influxdb::{Client, Error, Query};
+use futures_util::FutureExt;
+use influxdb::{Client, Error, ReadQuery};
+use std::future::Future;
 use std::panic::{AssertUnwindSafe, UnwindSafe};
 
 #[allow(dead_code)]
@@ -28,9 +29,7 @@ where
 {
     let test_name = name.into();
     let query = format!("CREATE DATABASE {}", test_name);
-    create_client(test_name)
-        .query(&Query::raw_read_query(query))
-        .await
+    create_client(test_name).query(ReadQuery::new(query)).await
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -40,9 +39,7 @@ where
 {
     let test_name = name.into();
     let query = format!("DROP DATABASE {}", test_name);
-    create_client(test_name)
-        .query(&Query::raw_read_query(query))
-        .await
+    create_client(test_name).query(ReadQuery::new(query)).await
 }
 
 #[cfg(not(tarpaulin_include))]
